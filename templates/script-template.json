@@ -1,0 +1,87 @@
+[
+  {
+    "id": "vid-001",
+    "title": "E-Rechnung ab 2027 Pflicht",
+    "description": "Was die E-Rechnungspflicht für deutsche Unternehmen bedeutet",
+    "tags": ["E-Rechnung", "ZUGFeRD", "XRechnung", "Buchhaltung", "Digitalisierung"],
+    "voice_id": "CLrOIc4387Te6zgQGxeh",
+    "voice_name": "Markus (confident, advertisement)",
+    "theme": "dark",
+    "brand": {
+      "logo": "assets/logo.png",
+      "colors": {
+        "primary": "#1B4B73",
+        "accent": "#4A9CC7",
+        "highlight": "#5BB8E8"
+      }
+    },
+    "scenes": [
+      {
+        "id": "intro",
+        "duration_hint": "6s",
+        "headline": "E-Rechnung ab 2027 Pflicht",
+        "subline": "Was Sie jetzt wissen sollten",
+        "voiceover_text": "Die E-Rechnung wird ab zwanzig siebenundzwanzig in Deutschland zur Pflicht. Was bedeutet das für Ihr Unternehmen?",
+        "bg_prompt": "Professional dark navy gradient, soft bokeh lights, premium corporate, 8K",
+        "animation": "title-sweep-left-right"
+      },
+      {
+        "id": "content",
+        "duration_hint": "8s",
+        "headline": "Was ist eine E-Rechnung?",
+        "cards": [
+          { "title": "Kein PDF, kein Scan", "desc": "Maschinenlesbar statt Papier" },
+          { "title": "Strukturiertes XML", "desc": "Nach EN 16931 Norm" },
+          { "title": "Automatisiert", "desc": "Direkt ins Buchhaltungssystem" }
+        ],
+        "voiceover_text": "Eine E-Rechnung ist kein PDF und kein Scan. Es ist ein strukturiertes, maschinenlesbares XML-Format nach europäischer Norm.",
+        "bg_prompt": "Minimal dark background, subtle geometric lines, midnight blue, 8K",
+        "animation": "staggered-cards"
+      },
+      {
+        "id": "timeline",
+        "duration_hint": "7s",
+        "headline": "Der Zeitplan",
+        "milestones": [
+          { "year": "2025", "label": "Empfangspflicht", "sub": "alle Unternehmen" },
+          { "year": "2027", "label": "Sendepflicht", "sub": "schrittweise verpflichtend" }
+        ],
+        "voiceover_text": "Ab Januar zwanzig fünfundzwanzig müssen alle Unternehmen E-Rechnungen empfangen können. Die Sendepflicht folgt schrittweise ab zwanzig siebenundzwanzig.",
+        "bg_prompt": "Dark navy with elegant horizontal light streak, keynote style, 8K",
+        "animation": "timeline-cards"
+      },
+      {
+        "id": "steps",
+        "duration_hint": "5s",
+        "headline": "So bereiten Sie sich vor",
+        "steps": [
+          { "num": "01", "title": "Software prüfen", "sub": "E-Rechnung-fähige Lösung?" },
+          { "num": "02", "title": "Format einrichten", "sub": "ZUGFeRD oder XRechnung" },
+          { "num": "03", "title": "Testen und starten", "sub": "Empfang und Versand validieren" }
+        ],
+        "voiceover_text": "Drei Schritte machen Sie bereit: Software prüfen, Format einrichten und Prozesse testen.",
+        "bg_prompt": "Soft diagonal light rays in cool blue, shallow depth of field, 8K",
+        "animation": "staggered-cards"
+      },
+      {
+        "id": "cta",
+        "duration_hint": "5s",
+        "headline": "Bereit für die E-Rechnung?",
+        "subline": "EasyFirma 3 · Das Rechnungsprogramm ohne Abo",
+        "url": "www.easyfirma.com",
+        "mockup_image": "assets/mockup-dark.png",
+        "voiceover_text": "Mit EasyFirma 3 sind Sie sofort startklar. Das Rechnungsprogramm ohne Abo.",
+        "bg_prompt": "Centered radial blue glow on deep navy, Apple keynote style, 8K",
+        "animation": "mockup-float-reveal"
+      }
+    ],
+    "schedule": {
+      "youtube": "2026-03-28T09:00:00Z",
+      "linkedin": "2026-03-28T10:00:00Z",
+      "twitter": "2026-03-28T12:00:00Z",
+      "facebook": "2026-03-28T15:00:00Z",
+      "instagram": "2026-03-28T18:00:00Z",
+      "tiktok": "2026-03-28T19:00:00Z"
+    }
+  }
+]
