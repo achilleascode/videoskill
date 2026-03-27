@@ -118,21 +118,27 @@ import { Sequence, Series } from "remotion";
 ```
 
 ### TransitionSeries (Smooth scene changes)
+**IMPORTANT:** Only use `fade()` for enterprise videos. See D3 for critical rules on audio overlap,
+manual fadeOut conflicts, and duration math.
 ```tsx
 import { TransitionSeries, springTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
-import { slide } from "@remotion/transitions/slide";
-import { wipe } from "@remotion/transitions/wipe";
-import { flip } from "@remotion/transitions/flip";
-import { clockWipe } from "@remotion/transitions/clock-wipe";
 
+// Each scene has per-scene <Audio> inside. Scene durations include tail buffer
+// so voiceover finishes before transition starts (see D4).
+// NEVER put fadeOut opacity wrappers inside scene components.
 <TransitionSeries>
-  <TransitionSeries.Sequence durationInFrames={90}><SceneA /></TransitionSeries.Sequence>
-  <TransitionSeries.Transition presentation={slide({ direction: "from-left" })}
-    timing={springTiming({ config: { damping: 200 }, durationInFrames: 30 })} />
-  <TransitionSeries.Sequence durationInFrames={120}><SceneB /></TransitionSeries.Sequence>
-  <TransitionSeries.Transition presentation={fade()} timing={springTiming({ durationInFrames: 20 })} />
-  <TransitionSeries.Sequence durationInFrames={60}><SceneC /></TransitionSeries.Sequence>
+  <TransitionSeries.Sequence durationInFrames={200}><SceneA /></TransitionSeries.Sequence>
+  <TransitionSeries.Transition
+    presentation={fade()}
+    timing={springTiming({ config: { damping: 200 }, durationInFrames: 25 })}
+  />
+  <TransitionSeries.Sequence durationInFrames={290}><SceneB /></TransitionSeries.Sequence>
+  <TransitionSeries.Transition
+    presentation={fade()}
+    timing={springTiming({ config: { damping: 200 }, durationInFrames: 25 })}
+  />
+  <TransitionSeries.Sequence durationInFrames={180}><SceneC /></TransitionSeries.Sequence>
 </TransitionSeries>
 ```
 
@@ -656,30 +662,168 @@ const Particles: React.FC<{ count?: number }> = ({ count = 50 }) => {
 - **Banned fonts:** System defaults. Always load via @remotion/google-fonts
 - **Premium picks:** Outfit, Sora, SpaceGrotesk, PlusJakartaSans
 
-## D3. Motion Principles
-- **Spring > Linear:** Always. Linear looks robotic
-- **Stagger:** 3-5 frame delay between sequential elements
-- **Overshoot:** `damping: 8-12` for energy
-- **Smooth:** `damping: 200` for controlled reveals
-- **No sickness:** Avoid full-screen rotations, rapid zoom oscillations
-- **60fps budget:** Springs and noise are efficient; avoid heavy DOM ops
+## D3. Transitions — CRITICAL RULES
 
-## D4. Anti-Patterns (BANNED)
+### Only use `fade()` for transitions
+- `slide()`, `wipe()`, `flip()` look jarring and unprofessional in enterprise videos
+- ALWAYS use `fade()` with `springTiming({ config: { damping: 200 }, durationInFrames: 25 })`
+- **Maximum transition duration: 30 frames (1 second)**. Longer = sluggish
+- Minimum: 20 frames. Shorter = too abrupt
+
+### Audio overlap during transitions
+TransitionSeries overlaps the END of scene N with the START of scene N+1 during the transition.
+If both scenes have `<Audio>`, the voiceover clips will overlap and sound garbled.
+
+**Fix: Add tail buffer to scene durations.** Each scene must be longer than its audio by at least
+`transition_duration + 15 frames`. This creates silence at the end of each scene so audio finishes
+before the transition begins crossfading into the next scene's audio.
+
+```
+Scene duration = ceil(audio_duration_seconds * fps) + transition_frames + 15
+```
+
+Example: Audio is 5.9s = 177 frames. Transition is 25 frames. Scene = 177 + 25 + 15 = 217 frames.
+
+### NEVER use manual fadeOut inside scenes
+TransitionSeries handles the crossfade. Adding `opacity: fadeOut` inside a scene component creates
+a DOUBLE fade — the scene fades to transparent AND the transition fades. Result: the background
+color/previous scene bleeds through as a flash. **Remove all manual fadeOut wrappers from scene
+components.** The outermost `<AbsoluteFill>` in each scene must NOT have an opacity animation.
+
+### Duration math
+```
+Total video duration = sum(all scene durations) - sum(all transition durations)
+```
+Always verify this calculation. Off-by-one errors cause audio desync or black frames at the end.
+
+## D4. Audio-Visual Sync — CRITICAL RULES
+
+### Generate voiceover FIRST, then match scene durations
+1. Write the script per scene
+2. Generate each scene's voiceover as a separate MP3 via ElevenLabs
+3. Measure each MP3's exact duration with `ffprobe`
+4. Set scene duration = audio duration + tail buffer (see D3)
+
+### Sync animation timing to spoken words
+Every animated element (bullet point, card, number) must appear at the EXACT frame when the
+voiceover speaks the corresponding word. Calculate frame offsets from the audio:
+
+```
+word_spoken_at_seconds = listen to the audio and note timestamps
+animation_delay = Math.round(word_spoken_at_seconds * fps)
+```
+
+**Common mistake:** Using fixed delays like `delay: 20 + i * 14` without checking what the voice
+says at that moment. A bullet reading "Kein PDF" must appear when the speaker says "kein PDF",
+not 2 seconds before or after.
+
+### Per-scene audio (not one combined file)
+Always place `<Audio src={staticFile("assets/vo-sceneN.mp3")} volume={1} />` INSIDE each scene
+component. This ensures perfect sync regardless of scene duration changes. Never use one combined
+voiceover file across all scenes — timing breaks when you adjust scene lengths.
+
+### Background music
+- Place BGM `<Audio>` in the Root component, NOT in individual scenes
+- Volume: constant low value (0.02-0.04), NO fade in/out — sounds inconsistent
+- Use royalty-free music. Generate with ElevenLabs Sound Effects API if needed (max 22s per clip)
+
+### ElevenLabs number pronunciation
+Years like "2027" may be spoken as "zwei null zwei sieben" or "zwanzig siebenundzwanzig".
+To force correct pronunciation, write the number as words in the script:
+- "2025" → "zwanzig fünfundzwanzig"
+- "2027" → "zwanzig siebenundzwanzig"
+
+## D5. Scene Layout — Enterprise Standard
+
+### Card-based layouts (preferred)
+Use glassmorphism cards for all info-heavy scenes (explanations, steps, timelines):
+```tsx
+<div style={{
+  width: 460, padding: "44px",
+  backgroundColor: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 20,
+  backdropFilter: "blur(8px)",
+  position: "relative", overflow: "hidden",
+}}>
+  {/* Top accent bar */}
+  <div style={{
+    position: "absolute", top: 0, left: 0, right: 0, height: 3,
+    backgroundColor: accentColor,
+    transform: `scaleX(${progress})`, transformOrigin: "left",
+  }} />
+  {/* Content */}
+</div>
+```
+
+### Consistent scene structure
+Every scene follows the same visual hierarchy:
+1. **Background:** Ken Burns image (`scale 1.04-1.08 → 1.0` over full duration)
+2. **Overlay:** `COLORS.overlay` (semi-transparent dark)
+3. **Ambient particles:** 8-15 noise-driven dots (optional, subtle)
+4. **Header:** Centered top (top: 130), 60px Outfit bold, spring entrance
+5. **Content area:** Cards or key content, centered, flex-row layout
+6. **Audio:** Per-scene voiceover
+
+### Blur-to-sharp entrance effect
+Every element that enters should blur-to-sharp AND translate, not just fade:
+```tsx
+const p = spring({ frame: frame - delay, fps, config: { damping: 22, stiffness: 50, mass: 1.1 } });
+const y = interpolate(p, [0, 1], [40, 0]);
+const blur = interpolate(p, [0, 1], [8, 0]);
+// Apply: opacity: p, transform: translateY(y), filter: blur(blur)
+```
+
+### Spacing rules
+- Cards in a row: `gap: 40px`
+- Header to content: `paddingTop: 60px` on content container
+- No text in top-right 220x90px zone (logo watermark area)
+
+## D6. Background Images — No AI Slop
+
+### Prompt strategy for nanobanana
+NEVER use prompts with "holographic", "floating documents", "glowing grids", "sci-fi elements",
+or "futuristic UI". These produce cheap AI-looking backgrounds.
+
+**DO use:** Abstract photography-style prompts:
+- "Professional dark navy gradient, soft bokeh lights, warm white tones, shot on Hasselblad"
+- "Minimal dark background with subtle geometric lines, soft light source upper left"
+- "Dark surface with single elegant horizontal light streak, keynote presentation style"
+- "Soft diagonal light rays in cool blue, shallow depth of field, luxury brand aesthetic"
+
+All backgrounds in a video must use the same `conversation_id` and `use_image_history: true`
+to maintain visual consistency.
+
+## D7. Anti-Patterns (BANNED)
+
+### Visual
 - No `#000000` backgrounds — `#0a0a0a` minimum (banding)
-- No `#FFFFFF` text on `#000000` — use off-white on off-black
 - No system fonts — always @remotion/google-fonts
 - No text under 28px at 1080p
 - No thin weights (100-300) — compression destroys them
+- No unmasked image edges — use rounded corners or drop-shadow
+- No AI-looking backgrounds (holographic, floating documents, glowing grids)
+
+### Animation
 - No linear easing — always spring or bezier
-- No instant cuts without transition (unless rapid-fire montage)
-- No elements appearing without easing
-- No animations under 8 frames (too jarring)
-- No more than 3 simultaneous independent animations
-- No Lorem Ipsum — real text only
-- No watermarked or copyrighted assets
-- No `Video` for long clips — use `OffthreadVideo`
-- No unoptimized images — max 2MB each
-- No `window`/`document` — Remotion renders in Node.js
+- No manual fadeOut wrappers — TransitionSeries handles it
+- No slide/wipe/flip transitions — fade() only for enterprise
+- No transition longer than 30 frames (1 second)
+- No animations faster than 15 frames — too jarring
+- No elements appearing without blur-to-sharp + translate
+
+### Audio
+- No single combined voiceover file — use per-scene MP3s
+- No BGM volume above 0.04 — voice must dominate
+- No BGM fade in/out — constant volume sounds cleaner
+- No audio overlap during transitions — add tail buffer to scenes
+- No writing years as digits in ElevenLabs scripts — spell them out
+
+### Content
+- No Lorem Ipsum
+- No generic stock photos — generate with nanobanana or curate
+- No watermarked assets
+- No em dashes (—) in on-screen text — use middle dots (·) or commas
 
 ---
 
