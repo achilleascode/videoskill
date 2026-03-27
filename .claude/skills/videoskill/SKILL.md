@@ -433,6 +433,70 @@ mcp__remotion-docs__remotion-documentation({ query: "TransitionSeries fade slide
 mcp__remotion-docs__remotion-documentation({ query: "calculateMetadata async data" })
 ```
 
+## B9. ElevenLabs Voice-Over (TTS API)
+
+Generate professional voice-overs for any video. Store API key in `.env` as `ELEVENLABS_API_KEY`.
+
+### Generate Voice-Over via curl
+```bash
+curl -s "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}" \
+  -H "xi-api-key: $ELEVENLABS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Your voiceover script here",
+    "model_id": "eleven_multilingual_v2",
+    "voice_settings": {
+      "stability": 0.6,
+      "similarity_boost": 0.85,
+      "style": 0.4,
+      "use_speaker_boost": true
+    }
+  }' \
+  --output public/assets/voiceover.mp3
+```
+
+### Recommended German Voices
+| Voice ID | Name | Style | Best for |
+|----------|------|-------|----------|
+| `CLrOIc4387Te6zgQGxeh` | Markus | confident, advertisement | Product videos, ads |
+| `MbbPUteESkJWr4IAaW35` | Felix | professional | Explainer, corporate |
+| `zKHQdbB8oaQ7roNTiDTK` | Laura | professional, female | Customer-facing |
+| `aTTiK3YzK3dXETpuDE2h` | Ben | confident, young | Modern, startup |
+| `6CS8keYmkwxkspesdyA7` | Ramona | professional, female | Customer care |
+
+### Voice Settings Tuning
+- `stability`: 0.3 (expressive) to 0.9 (consistent). Default 0.6
+- `similarity_boost`: Higher = closer to original voice. Default 0.85
+- `style`: 0.0 (neutral) to 1.0 (expressive). Default 0.4
+- `model_id`: `eleven_multilingual_v2` for German, `eleven_turbo_v2_5` for fast English
+
+### List All Voices
+```bash
+curl -s "https://api.elevenlabs.io/v1/voices" \
+  -H "xi-api-key: $ELEVENLABS_API_KEY" | python3 -c "
+import json, sys
+for v in json.load(sys.stdin)['voices']:
+    labels = v.get('labels', {})
+    if labels.get('language','') == 'de':
+        print(f\"{v['voice_id']} | {v['name']} | {labels}\")"
+```
+
+### Integration with Remotion
+```tsx
+// Reference the generated audio file
+<Audio src={staticFile("voiceover.mp3")}
+  volume={(f) => interpolate(f, [0, 10, dur - 20, dur], [0, 1, 1, 0], {
+    extrapolateLeft: "clamp", extrapolateRight: "clamp",
+  })} />
+```
+
+### Pro Tips
+- Generate voiceover FIRST, then match video duration to audio length
+- Use `ffprobe` to get exact duration: `ffprobe -v quiet -show_entries format=duration -of csv=p=0 file.mp3`
+- Set Remotion `durationInFrames = Math.ceil(audioDuration * fps)`
+- Add 0.5s padding at start and end for clean fade
+- For scene-synced audio: generate separate MP3 per scene, combine with Sequence
+
 ---
 
 # PART C: SCENE ARCHETYPES
