@@ -505,130 +505,360 @@ for v in json.load(sys.stdin)['voices']:
 
 ---
 
-# PART C: SCENE ARCHETYPES
+# PART C: MOTION GRAPHICS SYSTEM
 
-## C1. Cinematic Intro (Hero)
+Every element that appears on screen MUST use the **blur-to-sharp + translate** entrance pattern.
+No element may simply "pop" into existence. This is the core of enterprise-grade motion graphics.
+
+## C1. The Entrance Pattern (MANDATORY for all elements)
+
+Every animated element uses this exact pattern:
 ```tsx
-const CinematicIntro: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const { fontFamily } = loadFont("Outfit");
+// Spring with slow, weighty feel
+const p = spring({
+  frame: frame - DELAY,  // synced to voiceover
+  fps,
+  config: { damping: 22, stiffness: 50, mass: 1.1 },  // slow and smooth
+});
 
-  const titleScale = spring({ frame, fps, config: { damping: 200 } });
-  const subtitleOpacity = interpolate(frame, [30, 50], [0, 1], { extrapolateRight: "clamp" });
-  const bgZoom = interpolate(frame, [0, 90], [1.1, 1], { extrapolateRight: "clamp" });
+// Three simultaneous properties
+const translateY = interpolate(p, [0, 1], [40, 0]);    // slides up 40px
+const blur = interpolate(p, [0, 1], [8, 0]);            // sharpens from 8px blur
+const opacity = p;                                       // fades in naturally
 
-  return (
-    <AbsoluteFill>
-      <AbsoluteFill style={{ transform: `scale(${bgZoom})` }}>
-        <Img src={staticFile("hero-bg.png")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      </AbsoluteFill>
-      <AbsoluteFill style={{ backgroundColor: "rgba(0,0,0,0.5)" }} />
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
-        <div style={{ transform: `scale(${titleScale})`, fontFamily, fontSize: 96, fontWeight: 800,
-                       color: "white", letterSpacing: "-0.03em", textAlign: "center" }}>{title}</div>
-        <div style={{ opacity: subtitleOpacity, fontFamily, fontSize: 32,
-                       color: "rgba(255,255,255,0.7)", marginTop: 20 }}>{subtitle}</div>
-      </AbsoluteFill>
-    </AbsoluteFill>
-  );
-};
+// Apply all three together
+<div style={{
+  opacity,
+  transform: `translateY(${translateY}px)`,
+  filter: `blur(${blur}px)`,
+}}>
 ```
 
-## C2. Character-by-Character Text Reveal
-```tsx
-const TextReveal: React.FC<{ text: string }> = ({ text }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  return (
-    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", backgroundColor: "#0a0a0a" }}>
-      <div style={{ display: "flex", fontSize: 80, fontWeight: 700, color: "white" }}>
-        {text.split("").map((char, i) => {
-          const s = spring({ frame: frame - i * 3, fps, config: { damping: 15, stiffness: 120 } });
-          return (
-            <span key={i} style={{ display: "inline-block",
-              transform: `translateY(${interpolate(s, [0, 1], [40, 0])}px)`, opacity: s }}>
-              {char === " " ? "\u00A0" : char}
-            </span>
-          );
-        })}
-      </div>
-    </AbsoluteFill>
-  );
-};
-```
+### Direction Variants
+- **From bottom (default):** `translateY: [40, 0]` — content rises into place
+- **From left:** `translateX: [-60, 0]` — sweeps in from left side
+- **From right:** `translateX: [60, 0]` — sweeps in from right side
+- **Scale up:** Add `transform: scale(${interpolate(p, [0, 1], [0.88, 1])})` — grows into place
 
-## C3. Ken Burns Image
-```tsx
-const KenBurns: React.FC<{ src: string }> = ({ src }) => {
-  const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
-  const scale = interpolate(frame, [0, durationInFrames], [1, 1.15], { extrapolateRight: "clamp" });
-  const x = interpolate(frame, [0, durationInFrames], [0, -30]);
-  return (
-    <AbsoluteFill>
-      <Img src={src} style={{ width: "100%", height: "100%", objectFit: "cover",
-        transform: `scale(${scale}) translate(${x}px, 0)` }} />
-    </AbsoluteFill>
-  );
-};
-```
+### Spring Config Reference
+| Feel | Config | Use for |
+|------|--------|---------|
+| **Slow & elegant** | `{ damping: 22, stiffness: 50, mass: 1.1 }` | Cards, main content |
+| **Smooth header** | `{ damping: 22, stiffness: 65, mass: 0.7 }` | Headlines |
+| **Title sweep** | `{ damping: 18, stiffness: 80, mass: 0.8 }` | Big intro text |
+| **Bouncy accent** | `{ damping: 10, stiffness: 100, mass: 0.6 }` | Dots, nodes, small elements |
+| **Instant settle** | `{ damping: 200 }` | Subtle fades, backgrounds |
 
-## C4. Animated Counter
-```tsx
-const Counter: React.FC<{ value: number; suffix?: string }> = ({ value, suffix = "" }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const progress = spring({ frame, fps, config: { damping: 200 }, durationInFrames: 45 });
-  const current = Math.round(interpolate(progress, [0, 1], [0, value]));
-  return (
-    <div style={{ fontFamily: "JetBrains Mono", fontSize: 120, fontWeight: 800,
-                   color: "white", fontVariantNumeric: "tabular-nums" }}>
-      {current.toLocaleString()}{suffix}
-    </div>
-  );
-};
-```
+## C2. Scene Template (Copy this for every scene)
 
-## C5. Logo Reveal (Scale + Blur)
 ```tsx
-const LogoReveal: React.FC<{ src: string }> = ({ src }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const p = spring({ frame: frame - 10, fps, config: { damping: 12, stiffness: 80 } });
-  return (
-    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", backgroundColor: "#0a0a0a" }}>
-      <Img src={src} style={{ width: 400,
-        opacity: interpolate(p, [0, 0.5], [0, 1], { extrapolateRight: "clamp" }),
-        transform: `scale(${interpolate(p, [0, 1], [0.3, 1])})`,
-        filter: `blur(${interpolate(p, [0, 1], [20, 0])}px)` }} />
-    </AbsoluteFill>
-  );
-};
-```
-
-## C6. Particle Field (Noise-based)
-```tsx
+import React from "react";
+import {
+  AbsoluteFill, Audio, Img, interpolate, spring,
+  staticFile, useCurrentFrame, useVideoConfig,
+} from "remotion";
 import { noise2D } from "@remotion/noise";
-const Particles: React.FC<{ count?: number }> = ({ count = 50 }) => {
+import { COLORS } from "../lib/colors";
+import { outfit } from "../lib/fonts";
+
+export const SceneTemplate: React.FC = () => {
   const frame = useCurrentFrame();
-  const { width, height } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
+
+  // Layer 1: Ken Burns background (ALWAYS slow zoom 1.04-1.06 → 1.0)
+  const bgScale = interpolate(frame, [0, durationInFrames], [1.05, 1.0], {
+    extrapolateRight: "clamp",
+  });
+
+  // Layer 2: Header entrance
+  const headerP = spring({ frame: frame - 5, fps,
+    config: { damping: 22, stiffness: 65, mass: 0.7 } });
+  const headerY = interpolate(headerP, [0, 1], [-25, 0]);
+
   return (
-    <AbsoluteFill style={{ overflow: "hidden" }}>
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} style={{
-          position: "absolute",
-          left: noise2D(`x${i}`, frame * 0.008, i) * width,
-          top: noise2D(`y${i}`, i, frame * 0.008) * height,
-          width: 4 + noise2D(`s${i}`, i * 0.1, 0) * 6,
-          height: 4 + noise2D(`s${i}`, i * 0.1, 0) * 6,
-          borderRadius: "50%",
-          backgroundColor: `rgba(59, 130, 246, ${0.3 + noise2D(`o${i}`, i, frame * 0.01) * 0.5})`,
-        }} />
-      ))}
+    // NEVER wrap in opacity:fadeOut — TransitionSeries handles it
+    <AbsoluteFill>
+      {/* Per-scene audio */}
+      <Audio src={staticFile("assets/vo-sceneN.mp3")} volume={1} />
+
+      {/* Background + Ken Burns */}
+      <AbsoluteFill>
+        <Img src={staticFile("assets/bg-sceneN.png")}
+          style={{ width: "100%", height: "100%", objectFit: "cover",
+                   transform: `scale(${bgScale})` }} />
+      </AbsoluteFill>
+
+      {/* Dark overlay */}
+      <AbsoluteFill style={{ backgroundColor: COLORS.overlay }} />
+
+      {/* Ambient particles (8-12, very subtle) */}
+      <AbsoluteFill style={{ pointerEvents: "none" }}>
+        {Array.from({ length: 10 }, (_, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            left: 400 + noise2D(`px${i}`, frame * 0.003, i) * 600,
+            top: 250 + noise2D(`py${i}`, i, frame * 0.003) * 400,
+            width: 3, height: 3, borderRadius: "50%",
+            backgroundColor: COLORS.highlight,
+            opacity: 0.1 + Math.abs(noise2D(`po${i}`, i, frame * 0.005)) * 0.12,
+          }} />
+        ))}
+      </AbsoluteFill>
+
+      {/* Header (centered top) */}
+      <div style={{
+        position: "absolute", top: 130, width: "100%", textAlign: "center",
+        opacity: headerP, transform: `translateY(${headerY}px)`,
+      }}>
+        <span style={{
+          fontFamily: outfit.fontFamily, fontWeight: 800, fontSize: 60,
+          color: COLORS.white, letterSpacing: "-0.02em",
+        }}>
+          Scene Title Here
+        </span>
+      </div>
+
+      {/* Content: Cards in flex-row (see C3) */}
+      <AbsoluteFill style={{
+        display: "flex", flexDirection: "row", alignItems: "center",
+        justifyContent: "center", gap: 40, paddingTop: 60,
+      }}>
+        {/* Cards go here */}
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
+```
+
+## C3. Glassmorphism Card (Enterprise Standard)
+
+Every info scene uses these cards. NEVER use bullet lists or plain text on background.
+
+```tsx
+// Card with entrance animation
+const cardP = spring({
+  frame: frame - DELAY_SYNCED_TO_VOICE, fps,
+  config: { damping: 22, stiffness: 50, mass: 1.1 },
+});
+const cardY = interpolate(cardP, [0, 1], [40, 0]);
+const cardBlur = interpolate(cardP, [0, 1], [8, 0]);
+
+<div style={{
+  // Size
+  width: 460, padding: "44px",
+  // Glassmorphism
+  backgroundColor: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 20,
+  backdropFilter: "blur(8px)",
+  // Entrance
+  opacity: cardP,
+  transform: `translateY(${cardY}px)`,
+  filter: `blur(${cardBlur}px)`,
+  // For accent bar + glow
+  position: "relative", overflow: "hidden",
+}}>
+  {/* Top accent bar — scales from left */}
+  <div style={{
+    position: "absolute", top: 0, left: 0, right: 0, height: 3,
+    backgroundColor: accentColor,
+    transform: `scaleX(${cardP})`, transformOrigin: "left",
+    boxShadow: `0 0 12px ${accentColor}40`,
+  }} />
+
+  {/* Number badge (optional) */}
+  <div style={{
+    fontFamily: jetbrainsMono.fontFamily, fontSize: 52, fontWeight: 700,
+    color: accentColor, opacity: 0.3, lineHeight: 1,
+  }}>01</div>
+
+  {/* Title */}
+  <div style={{
+    fontFamily: outfit.fontFamily, fontSize: 38, fontWeight: 700,
+    color: COLORS.white, lineHeight: 1.15, marginTop: 14,
+  }}>Card Title</div>
+
+  {/* Description */}
+  <div style={{
+    fontFamily: outfit.fontFamily, fontSize: 26, fontWeight: 400,
+    color: COLORS.whiteSecondary, marginTop: 10, lineHeight: 1.4,
+  }}>Description text here</div>
+
+  {/* Bottom progress bar (optional) */}
+  <div style={{
+    position: "absolute", bottom: 0, left: 0,
+    width: `${interpolate(cardP, [0.5, 1], [0, 100], {
+      extrapolateLeft: "clamp", extrapolateRight: "clamp"
+    })}%`,
+    height: 2, backgroundColor: accentColor, opacity: 0.5,
+  }} />
+
+  {/* Inner glow (subtle) */}
+  <div style={{
+    position: "absolute", bottom: -30, right: -30,
+    width: 160, height: 160, borderRadius: "50%",
+    background: `radial-gradient(circle, ${accentColor}08 0%, transparent 70%)`,
+  }} />
+</div>
+```
+
+## C4. Accent Effects (Add life to scenes)
+
+### Pulsing Glow (behind key elements)
+```tsx
+const glowPulse = 0.15 + Math.sin(frame * 0.08) * 0.08;
+<div style={{
+  position: "absolute", width: 500, height: 200, borderRadius: "50%",
+  background: `radial-gradient(ellipse, ${COLORS.teal}${hex(glowPulse)} 0%, transparent 70%)`,
+  filter: "blur(40px)",
+}} />
+```
+
+### Floating Mockup
+```tsx
+const floatY = Math.sin(frame * 0.04) * 3;  // amplitude 3px, slow
+<Img src={...} style={{
+  transform: `translateY(${floatY}px)`,
+  filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.5))",
+}} />
+```
+
+### Dot with Pulse Ring (for bullet points)
+```tsx
+const dotScale = spring({ frame: frame - delay, fps,
+  config: { damping: 8, stiffness: 120 } });
+<div style={{ position: "relative" }}>
+  <div style={{
+    width: 14, height: 14, borderRadius: "50%",
+    backgroundColor: COLORS.teal,
+    transform: `scale(${dotScale})`,
+    boxShadow: `0 0 16px ${COLORS.teal}50`,
+  }} />
+  {/* Expanding ring */}
+  <div style={{
+    position: "absolute", inset: -6, borderRadius: "50%",
+    border: `2px solid ${COLORS.teal}`,
+    opacity: interpolate(dotScale, [0.8, 1.3], [0.5, 0], clampBoth),
+    transform: `scale(${interpolate(dotScale, [0.8, 1.3], [1, 1.8], clampBoth)})`,
+  }} />
+</div>
+```
+
+### Traveling Light Particle (along lines)
+```tsx
+{frame > 25 && (
+  <div style={{
+    position: "absolute", top: lineY - 3,
+    left: startX + ((frame - 25) % 90) / 90 * lineWidth,
+    width: 10, height: 10, borderRadius: "50%",
+    backgroundColor: COLORS.highlight,
+    boxShadow: `0 0 16px ${COLORS.highlight}80, 0 0 32px ${COLORS.teal}40`,
+    opacity: 0.7,
+  }} />
+)}
+```
+
+### Animated Checkmark (after step completion)
+```tsx
+{progress > 0.9 && (
+  <div style={{
+    width: 20, height: 20, borderRadius: "50%",
+    backgroundColor: COLORS.teal,
+    opacity: interpolate(progress, [0.9, 1], [0, 0.6], clampBoth),
+    transform: `scale(${interpolate(progress, [0.9, 1], [0.5, 1], clampBoth)})`,
+  }}>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="white" strokeWidth="3" strokeLinecap="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  </div>
+)}
+```
+
+## C5. Background Decorative Elements
+
+### Large Watermark Character (e.g. "?" behind question scenes)
+```tsx
+<div style={{
+  position: "absolute", right: 120, top: 140,
+  fontFamily: outfit.fontFamily, fontWeight: 900, fontSize: 420,
+  color: COLORS.teal,
+  opacity: interpolate(frame, [10, 50], [0, 0.04], clampBoth),
+  transform: `translateY(${interpolate(frame, [0, dur], [0, -20])}px)`,
+  pointerEvents: "none",
+}}>?</div>
+```
+
+## C6. Review Checklist (Run before rendering)
+
+Before rendering any video, verify:
+- [ ] Every element uses blur-to-sharp + translate entrance (no pop-in)
+- [ ] Animation delays are synced to voiceover timestamps
+- [ ] No manual `opacity: fadeOut` wrapper on root AbsoluteFill
+- [ ] Cards have top accent bar + inner glow
+- [ ] Header uses `top: 130` centered, 60px Outfit bold
+- [ ] Ken Burns is subtle (1.04-1.06 max, not 1.15)
+- [ ] Ambient particles are < 12 count, opacity < 0.25
+- [ ] No text in top-right 220x90px zone (logo area)
+- [ ] Scene duration > audio duration + 40 frames
+- [ ] Background images are photography-style, not AI slop
+
+## C7. Google Drive Upload (Review before Publishing)
+
+After rendering, upload videos to Google Drive for approval before publishing.
+
+### Via Google Drive CLI (gdrive)
+```bash
+# Install gdrive
+brew install gdrive
+
+# Upload single video
+gdrive files upload out/vid-001-landscape.mp4 --parent FOLDER_ID
+
+# Upload entire batch
+for f in out/*.mp4; do
+  gdrive files upload "$f" --parent FOLDER_ID
+done
+```
+
+### Via Google Drive API (Node.js)
+```ts
+import { google } from "googleapis";
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: "service-account.json",
+  scopes: ["https://www.googleapis.com/auth/drive.file"],
+});
+const drive = google.drive({ version: "v3", auth });
+
+async function uploadToDrive(filePath: string, folderId: string) {
+  const fs = require("fs");
+  const path = require("path");
+  const res = await drive.files.create({
+    requestBody: {
+      name: path.basename(filePath),
+      parents: [folderId],
+    },
+    media: {
+      mimeType: "video/mp4",
+      body: fs.createReadStream(filePath),
+    },
+  });
+  return `https://drive.google.com/file/d/${res.data.id}/view`;
+}
+```
+
+### Via Google Drive MCP (if available)
+```
+mcp__claude_ai_Google_Drive__*  // Check if connected
+```
+
+### Workflow: Render → Drive → Approve → Publish
+```
+1. Render all videos (landscape + portrait)
+2. Upload to Google Drive shared folder
+3. User reviews in Drive and approves
+4. User triggers /video-publish for approved videos
 ```
 
 ---
